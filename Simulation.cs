@@ -4,13 +4,7 @@ namespace GameOfLife;
 
 public class Simulation
 {
-    private class Proximity
-    {
-        public int counter;
-        public bool processed;
-    }
-    
-    private List<(long, long)> aliveCells = new();
+    private HashSet<(long, long)> aliveCells = new();
     private const string Header = "#Life 1.06";
 
     public Simulation()
@@ -45,21 +39,22 @@ public class Simulation
 
     private void Step()
     {
-        Dictionary<(long, long), Proximity?> proximityCells = new();
+        Dictionary<(long, long), int> proximityCells = new();
 
-        void AddProximity((long, long) key)
+        void AddProximity((long, long) key, bool increment)
         {
-            if (!proximityCells.TryGetValue(key, out Proximity? proximity))
+            if (!proximityCells.TryGetValue(key, out int proximity))
             {
-                proximityCells[key] = proximity = new Proximity { counter = 0, processed = false };
+                proximityCells[key] = proximity = 0;
             }
 
-            if (proximity is not null)
+            if (increment)
             {
-                proximity.counter++;
+                proximityCells[key] = proximity + 1;
             }
         }
         
+        // Mark all cells around living cells as active in the simulation
         foreach ((long startX, long startY) in aliveCells)
         {
             for (long xd = -1 ; xd <= 1 ; xd++)
@@ -67,32 +62,22 @@ public class Simulation
                 long x = Offset(startX, xd);
                 for (long yd = -1 ; yd <= 1 ; yd++)
                 {
-                    if (xd == 0 && yd == 0) continue;
-                    
                     long y = Offset(startY, yd);
-                    AddProximity((x, y));
+                    AddProximity((x, y), xd != 0 || yd != 0);
                 }
             }
         }
 
-        for (int i = 0 ; i < aliveCells.Count ; i++)
+        // Kill living cells and revive dead cells that grew this step
+        foreach (((long, long) key, int proximity) in proximityCells)
         {
-            if (!proximityCells.TryGetValue(aliveCells[i], out Proximity? proximity) ||
-                proximity?.counter is < 2 or > 3)
+            if (proximity == 3 || (aliveCells.Contains(key) && proximity == 2))
             {
-                aliveCells.RemoveAt(i--);
+                aliveCells.Add(key);
             }
-            else if (proximity is not null)
+            else
             {
-                proximity.processed = true;
-            }
-        }
-
-        foreach (((long x, long y), Proximity? proximity) in proximityCells)
-        {
-            if (proximity?.processed is false && proximity.counter == 3)
-            {
-                aliveCells.Add((x, y));
+                aliveCells.Remove(key);
             }
         }
     }
