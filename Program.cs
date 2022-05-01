@@ -89,6 +89,6 @@ string FileInput()
 {
     Console.WriteLine("Enter file path:");
     string? input = Console.ReadLine();
-    input = $"../../../{input}";
+    input = $"../../../TestCases/{input}";
     return File.Exists(input) ? File.ReadAllText(input) : string.Empty;
 }
